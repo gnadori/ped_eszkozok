@@ -3,32 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Óraelemző - Igen/Nem alapú</title>
+    <title>Óraelemző v2</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #1a73e8; margin-bottom: 30px; }
         .grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; }
-        .section { margin-bottom: 15px; padding: 15px; border-radius: 8px; background: #fff; border: 1px solid #e0e0e0; transition: 0.3s; }
-        .section:hover { border-color: #1a73e8; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .section { margin-bottom: 15px; padding: 15px; border-radius: 8px; background: #fff; border: 1px solid #e0e0e0; }
         .section h3 { margin-top: 0; color: #1a73e8; border-bottom: 2px solid #f0f2f5; padding-bottom: 8px; font-size: 1.05em; }
         .question { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.9em; line-height: 1.4; }
-        .question span { padding-right: 15px; }
         select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; width: 80px; }
         select.yes { background-color: #e6ffed; border-color: #2ecc71; }
         .chart-container { position: sticky; top: 20px; text-align: center; }
         .header-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .header-info input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
         .btn-print { background: #1a73e8; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
-        .btn-print:hover { background: #1557b0; }
         @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } .chart-container { position: static; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Digitális Óraelemző (Igen/Nem)</h1>
+    <h1>Óraelemző</h1>
     
     <div class="header-info">
         <input type="text" placeholder="Tanár neve">
@@ -50,7 +47,7 @@
             <div class="section" data-cat="1">
                 <h3>2. Tevékenységek</h3>
                 <div class="question"><span>Volt-e nem frontális munkaforma?</span> <select onchange="updateChart(this)"><option value="0">Nem</option><option value="1">Igen</option></select></div>
-                <div class="question"><span>A tanár kevesebbet beszélt, mint a diákok?</span> <select onchange="updateChart(this)"><option value="0">Nem</option><option value="1">Igen</option></select></div>
+                <div class="question"><span>A tanár kevesebbet beszélt?</span> <select onchange="updateChart(this)"><option value="0">Nem</option><option value="1">Igen</option></select></div>
                 <div class="question"><span>Volt lehetőség egyéni kutatásra?</span> <select onchange="updateChart(this)"><option value="0">Nem</option><option value="1">Igen</option></select></div>
             </div>
 
@@ -100,8 +97,7 @@
 
         <div class="chart-container">
             <canvas id="radarChart"></canvas>
-            <div id="stat-summary" style="margin-top: 20px; font-weight: bold; color: #555;"></div>
-            <button class="btn-print" onclick="window.print()">Elemzés mentése PDF-be</button>
+            <button class="btn-print" onclick="window.print()">Nyomtatás / Mentés</button>
         </div>
     </div>
 </div>
@@ -115,13 +111,12 @@
         data: {
             labels: labels,
             datasets: [{
-                label: 'Igen válaszok aránya (%)',
+                label: 'Értékelési szint',
                 data: [0, 0, 0, 0, 0, 0, 0, 0],
                 backgroundColor: 'rgba(26, 115, 232, 0.2)',
                 borderColor: 'rgba(26, 115, 232, 1)',
                 borderWidth: 3,
-                pointBackgroundColor: 'rgba(26, 115, 232, 1)',
-                pointRadius: 4
+                pointBackgroundColor: 'rgba(26, 115, 232, 1)'
             }]
         },
         options: {
@@ -129,7 +124,7 @@
                 r: {
                     min: 0,
                     max: 100,
-                    ticks: { stepSize: 20, callback: value => value + '%' },
+                    ticks: { stepSize: 20 },
                     pointLabels: { font: { size: 12, weight: 'bold' } }
                 }
             },
@@ -138,27 +133,20 @@
     });
 
     function updateChart(el) {
-        if(el) {
-            el.className = el.value == "1" ? "yes" : "";
-        }
+        if(el) el.className = el.value == "1" ? "yes" : "";
 
         const scores = [];
         for (let i = 0; i < 8; i++) {
             const selects = document.querySelectorAll(`.section[data-cat="${i}"] select`);
             let yesCount = 0;
             selects.forEach(s => { if(s.value == "1") yesCount++; });
-            const percentage = Math.round((yesCount / selects.length) * 100);
-            scores.push(percentage);
+            scores.push(Math.round((yesCount / selects.length) * 100));
         }
 
         myChart.data.datasets[0].data = scores;
         myChart.update();
-        
-        const avg = Math.round(scores.reduce((a, b) => a + b, 0) / 8);
-        document.getElementById('stat-summary').innerText = `Összesített megfelelőség: ${avg}%`;
     }
 
-    // Kezdő állapot beállítása
     updateChart();
 </script>
 
