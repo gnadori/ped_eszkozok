@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Óraelemző v2</title>
+    <title>Óraelemző v3</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
@@ -17,9 +17,16 @@
         select.yes { background-color: #e6ffed; border-color: #2ecc71; }
         .chart-container { position: sticky; top: 20px; text-align: center; }
         .header-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .header-info input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        .btn-print { background: #1a73e8; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        .header-info input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 90%; }
+        
+        .export-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 30px; }
+        .btn { padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; border: none; transition: 0.2s; color: white; }
+        .btn-pdf { background: #1a73e8; }
+        .btn-csv { background: #27ae60; }
+        .btn:hover { opacity: 0.8; }
+
         @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } .chart-container { position: static; } }
+        @media print { .export-buttons { display: none; } .container { box-shadow: none; border: none; } }
     </style>
 </head>
 <body>
@@ -28,10 +35,10 @@
     <h1>Óraelemző</h1>
     
     <div class="header-info">
-        <input type="text" placeholder="Tanár neve">
-        <input type="text" placeholder="Tantárgy">
-        <input type="text" placeholder="Osztály">
-        <input type="text" placeholder="Téma">
+        <input type="text" id="tanar" placeholder="Tanár neve">
+        <input type="text" id="targy" placeholder="Tantárgy">
+        <input type="text" id="osztaly" placeholder="Osztály">
+        <input type="text" id="tema" placeholder="Téma">
     </div>
 
     <div class="grid">
@@ -97,7 +104,10 @@
 
         <div class="chart-container">
             <canvas id="radarChart"></canvas>
-            <button class="btn-print" onclick="window.print()">Nyomtatás / Mentés</button>
+            <div class="export-buttons">
+                <button class="btn btn-pdf" onclick="window.print()">Letöltés PDF-ként</button>
+                <button class="btn btn-csv" onclick="downloadCSV()">Letöltés CSV-ként</button>
+            </div>
         </div>
     </div>
 </div>
@@ -111,7 +121,6 @@
         data: {
             labels: labels,
             datasets: [{
-                label: 'Értékelési szint',
                 data: [0, 0, 0, 0, 0, 0, 0, 0],
                 backgroundColor: 'rgba(26, 115, 232, 0.2)',
                 borderColor: 'rgba(26, 115, 232, 1)',
@@ -120,21 +129,13 @@
             }]
         },
         options: {
-            scales: {
-                r: {
-                    min: 0,
-                    max: 100,
-                    ticks: { stepSize: 20 },
-                    pointLabels: { font: { size: 12, weight: 'bold' } }
-                }
-            },
+            scales: { r: { min: 0, max: 100, ticks: { display: false } } },
             plugins: { legend: { display: false } }
         }
     });
 
     function updateChart(el) {
         if(el) el.className = el.value == "1" ? "yes" : "";
-
         const scores = [];
         for (let i = 0; i < 8; i++) {
             const selects = document.querySelectorAll(`.section[data-cat="${i}"] select`);
@@ -142,9 +143,50 @@
             selects.forEach(s => { if(s.value == "1") yesCount++; });
             scores.push(Math.round((yesCount / selects.length) * 100));
         }
-
         myChart.data.datasets[0].data = scores;
         myChart.update();
+    }
+
+    function downloadCSV() {
+        let csvContent = "\uFEFF"; // Magyar karakterek támogatása Excelben
+        
+        // Alapadatok
+        csvContent += "ÓRAELEMZÉSI JEGYZŐKÖNYV\n";
+        csvContent += `Tanár;${document.getElementById('tanar').value}\n`;
+        csvContent += `Tantárgy;${document.getElementById('targy').value}\n`;
+        csvContent += `Osztály;${document.getElementById('osztaly').value}\n`;
+        csvContent += `Téma;${document.getElementById('tema').value}\n\n`;
+        
+        // Részletes válaszok
+        csvContent += "RÉSZLETES VÁLASZOK\n";
+        csvContent += "Kategória;Kérdés;Válasz\n";
+        
+        const sections = document.querySelectorAll('.section');
+        sections.forEach(section => {
+            const catTitle = section.querySelector('h3').innerText;
+            const questions = section.querySelectorAll('.question');
+            questions.forEach(q => {
+                const qText = q.querySelector('span').innerText;
+                const qAns = q.querySelector('select').value == "1" ? "Igen" : "Nem";
+                csvContent += `"${catTitle}";"${qText}";"${qAns}"\n`;
+            });
+        });
+
+        // Összesítés
+        csvContent += "\nÖSSZESÍTETT EREDMÉNYEK (0-100)\n";
+        csvContent += "Kategória;Érték\n";
+        const scores = myChart.data.datasets[0].data;
+        labels.forEach((label, index) => {
+            csvContent += `${label};${scores[index]}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.setAttribute("href", URL.createObjectURL(blob));
+        link.setAttribute("download", "oraelemzes_reszletes.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     updateChart();
