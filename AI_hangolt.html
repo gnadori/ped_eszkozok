@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-ra hangolt képességek elemzése</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #1a73e8; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-style: italic; }
+        .grid { display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 30px; }
+        .section { margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #fff; border: 1px solid #e0e0e0; transition: 0.3s; }
+        .section:hover { border-color: #1a73e8; }
+        .section h3 { margin-top: 0; color: #1a73e8; border-bottom: 2px solid #f0f2f5; padding-bottom: 8px; font-size: 1.1em; }
+        .question { margin-bottom: 10px; }
+        .description { font-size: 0.85em; color: #555; margin-bottom: 10px; display: block; }
+        select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; background: #fff; font-size: 0.9em; cursor: pointer; }
+        select:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 5px rgba(26,115,232,0.3); }
+        .chart-container { position: sticky; top: 20px; background: #f8f9fa; padding: 20px; border-radius: 10px; }
+        .header-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .header-info input { padding: 12px; border: 1px solid #ddd; border-radius: 6px; }
+        .export-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .btn { padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; border: none; transition: 0.2s; color: white; width: 100%; }
+        .btn-pdf { background: #1a73e8; }
+        .btn-csv { background: #27ae60; }
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        @media (max-width: 950px) { .grid { grid-template-columns: 1fr; } .chart-container { position: static; } }
+        @media print { .export-buttons, .subtitle { display: none; } .container { box-shadow: none; border: none; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AI-ra hangolt képességek óraelemző</h1>
+    <p class="subtitle">A dokumentum alapján kidolgozott (ön)értékelő rendszer pedagógusoknak</p>
+    
+    <div class="header-info">
+        <input type="text" id="tanar" placeholder="Tanár neve">
+        <input type="text" id="targy" placeholder="Tantárgy">
+        <input type="text" id="osztaly" placeholder="Osztály">
+        <input type="text" id="feladat" placeholder="Feladat megnevezése">
+    </div>
+
+    <div class="grid">
+        <div id="questions-area">
+            <div class="section" data-cat="0">
+                <h3>1. Alkalmazkodóképesség és folyamatos tanulás</h3>
+                <span class="description">Az új módszerek és eszközök (pl. MI) felfedezésének mértéke.</span>
+                <select onchange="updateChart()">
+                    <option value="1">1. szint: Csak ismert eljárást/eszközt használnak</option>
+                    <option value="2">2. szint: Új eszköz pontos útmutatás alapján</option>
+                    <option value="3">3. szint: Új eszköz, maguknak kellett felfedezniük</option>
+                    <option value="4">4. szint: Önálló felfedezés + reflexió a tanulásra/hasznosíthatóságra</option>
+                </select>
+            </div>
+
+            <div class="section" data-cat="1">
+                <h3>2. Kritikai gondolkodás</h3>
+                <span class="description">Források elemzése, hallucinációk és elfogultságok kiszűrése.</span>
+                <select onchange="updateChart()">
+                    <option value="1">1. szint: Nem kell forrásokat elemezni/értékelni</option>
+                    <option value="2">2. szint: Megkapott források/eljárások értékelése</option>
+                    <option value="3">3. szint: Felkutatott források/eljárások értékelése</option>
+                    <option value="4">4. szint: Felkutatott források újszerű felhasználása</option>
+                </select>
+            </div>
+
+            <div class="section" data-cat="2">
+                <h3>3. Kitartás</h3>
+                <span class="description">Kudarctűrés, munkafolyamat értékelése és kockázatvállalás.</span>
+                <select onchange="updateChart()">
+                    <option value="1">1. szint: Csak végeredményt értékelnek, nincs esély kudarcra</option>
+                    <option value="2">2. szint: Folyamat értékelése VAGY kudarclehetőség</option>
+                    <option value="3">3. szint: Folyamat értékelése ÉS kudarclehetőség</option>
+                    <option value="4">4. szint: Döntésekből fakadó kudarc + kockázat jutalmazása</option>
+                </select>
+            </div>
+
+            <div class="section" data-cat="3">
+                <h3>4. Kreativitás és innováció</h3>
+                <span class="description">Saját megoldások, eredeti gondolkodás és design-folyamat.</span>
+                <select onchange="updateChart()">
+                    <option value="1">1. szint: A feladat teljesen reproduktív</option>
+                    <option value="2">2. szint: Többféle megoldási út választható</option>
+                    <option value="3">3. szint: Saját megoldások érdemben befolyásolják a feladatot</option>
+                    <option value="4">4. szint: Design-ciklus (ötletelés, prototípus, tesztelés)</option>
+                </select>
+            </div>
+
+            <div class="section" data-cat="4">
+                <h3>5. Etikai gondolkodás</h3>
+                <span class="description">Reflexió az MI és a technológia társadalmi/morális hatásaira.</span>
+                <select onchange="updateChart()">
+                    <option value="1">1. szint: Nem reflektál etikai kérdésekre</option>
+                    <option value="2">2. szint: Említ etikai kérdéseket</option>
+                    <option value="3">3. szint: Teoretikus vagy valós etikai kérdések a központban</option>
+                    <option value="4">4. szint: Valós etikai dilemma + reflexió a tanultakra</option>
+                </select>
+            </div>
+
+            <div class="section" data-cat="5">
+                <h3>6. Technológiai műveltség</h3>
+                <span class="description">Eszközök (kódolás, MI-promptolás) értő és újszerű használata.</span>
+                <select onchange="updateChart()">
+                    <option value="1">1. szint: Csak korábban ismert eszközhasználat</option>
+                    <option value="2">2. szint: Új eszköz/cél használata útmutatóval</option>
+                    <option value="3">3. szint: Új eszköz kiválasztása/használata útmutatás nélkül</option>
+                    <option value="4">4. szint: Új eszköz létrehozása vagy újszerű alkalmazás</option>
+                </select>
+            </div>
+
+            <div class="section" data-cat="6">
+                <h3>7. Metakogníció</h3>
+                <span class="description">Gondolkodásról való gondolkodás, tanulási folyamat tudatosítása.</span>
+                <select onchange="updateChart()">
+                    <option value="1">1. szint: Nincs reflexió a gondolkodási folyamatra</option>
+                    <option value="2">2. szint: Értékelés reflektál az alkalmazott gondolkodásra</option>
+                    <option value="3">3. szint: Diákok maguk reflektálnak saját folyamataikra</option>
+                    <option value="4">4. szint: Folyamatok tudatosítása + transzferlehetőségek</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="radarChart"></canvas>
+            <div class="export-buttons">
+                <button class="btn btn-pdf" onclick="window.print()">Letöltés PDF-ként</button>
+                <button class="btn btn-csv" onclick="downloadCSV()">Adatok exportálása (CSV)</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ctx = document.getElementById('radarChart').getContext('2d');
+    const labels = [
+        'Alkalmazkodás', 
+        'Kritikai gondolkodás', 
+        'Kitartás', 
+        'Kreativitás', 
+        'Etika', 
+        'Technológia', 
+        'Metakogníció'
+    ];
+
+    let myChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Képességszint (1-4)',
+                data: [1, 1, 1, 1, 1, 1, 1],
+                backgroundColor: 'rgba(26, 115, 232, 0.2)',
+                borderColor: 'rgba(26, 115, 232, 1)',
+                borderWidth: 3,
+                pointBackgroundColor: 'rgba(26, 115, 232, 1)',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    min: 0,
+                    max: 4,
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, display: true },
+                    grid: { color: '#ddd' },
+                    angleLines: { color: '#ddd' },
+                    pointLabels: { font: { size: 12, weight: 'bold' } }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    function updateChart() {
+        const scores = [];
+        const selects = document.querySelectorAll('select');
+        selects.forEach(s => {
+            scores.push(parseInt(s.value));
+        });
+        myChart.data.datasets[0].data = scores;
+        myChart.update();
+    }
+
+    function downloadCSV() {
+        let csvContent = "\uFEFF"; 
+        csvContent += "AI-RA HANGOLT KÉPESSÉGEK ELEMZÉSE\n";
+        csvContent += `Dátum;${new Date().toLocaleDateString()}\n`;
+        csvContent += `Tanár;${document.getElementById('tanar').value}\n`;
+        csvContent += `Tantárgy;${document.getElementById('targy').value}\n`;
+        csvContent += `Feladat;${document.getElementById('feladat').value}\n\n`;
+        
+        csvContent += "Képesség;Elért szint (1-4)\n";
+        const scores = myChart.data.datasets[0].data;
+        labels.forEach((label, index) => {
+            csvContent += `${label};${scores[index]}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.setAttribute("href", URL.createObjectURL(blob));
+        link.setAttribute("download", "ai_kepesseg_elemzes.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Kezdő állapot beállítása
+    window.onload = updateChart;
+</script>
+
+</body>
+</html>
